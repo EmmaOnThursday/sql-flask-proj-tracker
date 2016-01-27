@@ -36,22 +36,55 @@ def make_new_student(first_name, last_name, github):
     Given a first name, last name, and GitHub account, add student to the
     database and print a confirmation message.
     """
-    pass
+    QUERY = """INSERT INTO Students VALUES (:first_name, :last_name, :github)"""
+    db_cursor = db.session.execute(QUERY, {'first_name': first_name, 'last_name': last_name, 'github': github})
+    db.session.commit()
+
+    print "Successfully added student: %s %s" % (first_name, last_name)
 
 
 def get_project_by_title(title):
     """Given a project title, print information about the project."""
-    pass
+    QUERY = """SELECT * FROM projects WHERE title = :title """
+    db_cursor = db.session.execute(QUERY, {'title': title})
+    matching_projects = db_cursor.fetchall()
+    for row in matching_projects:
+        print "Project %s: ID is %i; Description: %s; Max Possible Grade is %i."% (row[1], row[0], row[2], row[3])
 
 
-def get_grade_by_github_title(github, title):
+def get_grade_by_github_title(user_entered_github, user_entered_title):
     """Print grade student received for a project."""
-    pass
+    QUERY = """SELECT grade 
+    FROM grades 
+    WHERE student_github = :github AND
+    project_title = :title"""
 
+    db_cursor = db.session.execute(QUERY, {'github': user_entered_github, 'title': user_entered_title})
+    row = db_cursor.fetchone()
+    print "The grade for that project is: %i" % (row[0])
+
+# def assign_grade(github, title, grade):                       #assuming project grade does not exist
+#     """Assign a student a grade on an assignment and print a confirmation."""
+#     QUERY = """ INSERT INTO grades (student_github, project_title, grade) 
+#                 VALUES (:github, :title, :grade) """
+#     db_cursor = db.session.execute(QUERY, {'github': github, 'title': title, 'grade': int(grade)})
+#     db.session.commit()
+
+#     print "Successfully added grade for %s: %s earned %i" % (title, github, int(grade))
 
 def assign_grade(github, title, grade):
-    """Assign a student a grade on an assignment and print a confirmation."""
-    pass
+    """Assign a student a grade on an assignment that has a prior grade and print a confirmation."""
+    QUERY = """UPDATE grades 
+                SET grade = :grade
+                WHERE student_github = :github AND project_title = :title"""
+    db_cursor = db.session.execute(QUERY, {'grade': int(grade), 'title': title, 'github': github})
+    db.session.commit()
+
+    print "Successfully updated grade for %s: %s now has grade %i" % (title, github, int(grade))
+
+def add_project(title, description, max_grade):
+    """Add a project, including the project title, description, and maximum grade."""
+
 
 
 def handle_input():
@@ -76,6 +109,18 @@ def handle_input():
             first_name, last_name, github = args   # unpack!
             make_new_student(first_name, last_name, github)
 
+        elif command == "project_info":
+            title = args[0]
+            get_project_by_title(title)
+
+        elif command == "grade_info":
+            user_entered_github, user_entered_title = args
+            get_grade_by_github_title(user_entered_github, user_entered_title)
+
+        elif command == "set_grade":
+            github, title, grade = args
+            assign_grade(github, title, grade)
+
         else:
             if command != "quit":
                 print "Invalid Entry. Try again."
@@ -85,6 +130,6 @@ if __name__ == "__main__":
     app = Flask(__name__)
     connect_to_db(app)
 
-    # handle_input()
+    handle_input()
 
     db.session.close()
